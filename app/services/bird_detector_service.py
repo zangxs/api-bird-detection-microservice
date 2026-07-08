@@ -2,6 +2,7 @@ import joblib
 import numpy as np
 from PIL import Image
 import io
+from fastai.vision.all import load_learner, PILImage
 from app.dto.request.bird_request import BirdRequest
 from app.dto.response.bird_response import BirdResponse
 
@@ -12,7 +13,6 @@ class BirdDetectorService:
 
     def __init__(self):
         self.learn = load_learner(MODEL_PATH)
-        # Confirma el orden real de las clases del modelo
         print(self.learn.dls.vocab)
 
     def detect_bird(self, request: BirdRequest) -> BirdResponse:
