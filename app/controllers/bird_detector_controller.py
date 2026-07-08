@@ -9,7 +9,7 @@ router = APIRouter()
 @router.post("/detector")
 async def detect_bird(
     image: UploadFile = File(...),
-    user_id: str = Form(...),
+    user_id: str = Form(default=""),
     s3_key: str = Form(default=""),
     service: BirdDetectorService = Depends()
 ) -> BirdResponse:
