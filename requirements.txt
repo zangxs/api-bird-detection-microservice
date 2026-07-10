@@ -5,3 +5,6 @@ pydantic
 fastai
 torch
 torchvision
+aio-pika
+boto3
+python-dotenv
