@@ -1,6 +1,3 @@
-import joblib
-import numpy as np
-from PIL import Image
 import io
 from fastai.vision.all import load_learner, PILImage
 from app.dto.request.bird_request import BirdRequest
@@ -23,11 +20,16 @@ class BirdDetectorService:
         bird_confidence = float(probs[self._bird_index()])
         is_bird = bird_confidence >= CONFIDENCE_THRESHOLD
 
-        return BirdResponse(
+        response = BirdResponse(
             image_id=request.image_id,
             is_bird=is_bird,
             confidence=round(bird_confidence, 4)
         )
+
+        print("detection response: ", response)
+
+        return response
+        
 
     def _bird_index(self) -> int:
         return self.learn.dls.vocab.o2i["bird"]
