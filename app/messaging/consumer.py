@@ -35,10 +35,6 @@ async def start_consumer(connection: aio_pika.RobustConnection):
             print("message received")
             payload = json.loads(message.body)
 
-            image_bytes = download_from_s3(payload["s3Key"])
-            print(f"Bytes descargados: {len(image_bytes)} bytes, primeros 20: {image_bytes[:20]}")
-
-
             request = BirdRequest(
                 image_id=payload["imageEventId"],
                 s3_key=payload["s3Key"],
