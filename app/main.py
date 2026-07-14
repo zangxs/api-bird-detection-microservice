@@ -5,7 +5,9 @@ from app.messaging.consumer import start_consumer
 from app.config.config import Config
 from app.messaging.publisher import Publisher
 import aio_pika
+from pillow_heif import register_heif_opener
 
+register_heif_opener()
 
 app = FastAPI()
 app.include_router(router)
