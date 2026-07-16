@@ -16,18 +16,28 @@ A FastAPI microservice for bird detection using a fast.ai vision model. Supports
 - **aio-pika** — Async RabbitMQ client
 - **boto3** — AWS SDK for S3
 - **python-dotenv** — .env file loading
+- **pillow-heif** — HEIC/HEIF decoding, registered via `register_heif_opener()` in `app/main.py` so `PILImage.create` can open iPhone-format photos
 
 ## Prerequisites
 
 ### Model File Required
 
-The service requires a trained model file at `app/ml/bird_detector_model.pkl`.
+The service requires a trained model file at `app/ml/bird_model_latest.pkl`.
 
-**Download from Kaggle:**
-1. Go to: https://www.kaggle.com/code/jhoward/is-it-a-bird-creating-a-model-from-your-own-data
-2. Follow the notebook to train/export a model
-3. Save the exported model as `bird_detector_model.pkl`
-4. Place it in: `app/ml/bird_detector_model.pkl`
+**Download from Hugging Face** (public, no token needed):
+
+```bash
+mkdir -p app/ml
+curl -L -o app/ml/bird_model_latest.pkl \
+  https://huggingface.co/brayanspv/bird_detection_brayanpv/resolve/main/bird_model_latest.pkl
+
+# verify you got the exact file that was uploaded, not something swapped in later at that URL
+echo "6603ab02a38a4d5ad56b02ab472a9c51a8ac5744da13fde513ee47eb694ce86b  app/ml/bird_model_latest.pkl" | sha256sum -c
+```
+
+Repo: <https://huggingface.co/brayanspv/bird_detection_brayanpv>. The Hub's scanner flags the file
+`Unsafe` (`PAIT-PYTCH-100`/`101`) because `fastai`'s `Learner.export()` pickles the whole `Learner` —
+that's a near-universal false positive for fastai exports, not evidence of tampering.
 
 The model vocabulary must be: `['bird', 'forest']` (bird class index 0).
 
@@ -142,7 +152,7 @@ curl -X POST http://localhost:8000/detector \
 | Field | Type | Description |
 |-------|------|-------------|
 | `imageId` | string | Identifier for the processed image |
-| `isBird` | boolean | `true` if bird detected (confidence ≥ 0.80) |
+| `isBird` | boolean | `true` if bird detected (confidence ≥ 0.65) |
 | `confidence` | float | Model confidence score (0.0–1.0) |
 
 ### Bird Detection (Async/RabbitMQ)
@@ -159,11 +169,25 @@ Consumer downloads from S3, runs detection, publishes result to exchange `bird_d
 
 ## Configuration
 
-**Confidence Threshold:** Hardcoded at `0.80` in `app/services/bird_detector_service.py`
+**Confidence Threshold:** Hardcoded at `0.65` in `app/services/bird_detector_service.py`
 
-**Model Path:** `app/ml/bird_detector_model.pkl` (loaded at service startup)
+**Model Path:** `app/ml/bird_model_latest.pkl` (loaded at service startup)
 
 **Environment Variables:** See [Prerequisites](#environment-variables-env-required) — validated in `app/config/config.py`
+
+## Running with Docker
+
+```bash
+docker build -t bird-detection-microservice .
+docker run -p 8000:8000 \
+  --env-file .env \
+  -v "$(pwd)/app/ml:/app/app/ml" \
+  bird-detection-microservice
+```
+
+The image does **not** bundle the model file (`app/ml/*.pkl` is gitignored and excluded via
+`.dockerignore`) — mount it as a volume as shown above. The container fails fast on startup if it's
+missing, which is the point: no silent fallback to an unloaded model.
 
 ## Common Tasks
 
@@ -179,7 +203,7 @@ Consumer downloads from S3, runs detection, publishes result to exchange `bird_d
 - **Model format:** fastai `Learner` exported via `learn.export()`
 - **Security:** `load_learner` uses pickle — only load trusted model files
 - **No error handling, validation, or logging** configured
-- **No CI/CD, Dockerfile, or deployment config**
+- **No CI/CD** — `Dockerfile`/`.dockerignore` exist, but nothing builds/pushes the image automatically
 - `.env` contains real AWS credentials — **do not commit**
 - Consumer creates its own `BirdDetectorService` instance (separate from HTTP DI)
 - S3 client created at module load time — requires valid AWS creds at import

@@ -1,0 +1,12 @@
+env/
+venv/
+.env
+.git/
+.gitignore
+app/ml/
+*.pkl
+__pycache__/
+*.pyc
+README.md
+AGENTS.md
+LICENSE
