@@ -189,6 +189,11 @@ The image does **not** bundle the model file (`app/ml/*.pkl` is gitignored and e
 `.dockerignore`) — mount it as a volume as shown above. The container fails fast on startup if it's
 missing, which is the point: no silent fallback to an unloaded model.
 
+To run this service together with the orchestrator, classification, Postgres, and RabbitMQ via a
+single `docker compose up`, see `../api-bird-orchestator-microservice/DOCKER.md` — its
+`docker-compose.yml` builds this image from `../api-bird-detection-microservice`, so this repo needs
+to be checked out as a sibling of the orchestrator repo.
+
 ## Common Tasks
 
 | Task | Command |
