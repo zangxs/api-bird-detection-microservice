@@ -88,9 +88,17 @@ python -m venv env
 source env/bin/activate  # Linux/macOS
 # env\Scripts\activate   # Windows
 
-# Install dependencies
+# Install dependencies — requirements-ml.txt first (fastai/torch/torchvision, pinned to match
+# the training venv), then this service's own deps
+pip install -r requirements-ml.txt
 pip install -r requirements.txt
 ```
+
+`requirements-ml.txt` is byte-identical to `../api-bird-classification-microservice/requirements-ml.txt`
+(`fastai==2.8.7`, `torch==2.13.0`, `torchvision==0.28.0` — pinned to match the venv the models were
+trained in, plus `aio-pika`/`boto3`/`python-dotenv`, shared by both services). In Docker this split
+lets the two images share the ~8.9GB `torch`/`fastai` layer instead of each paying for it separately
+— see `../api-bird-orchestator-microservice/DOCKER.md` for the image-size breakdown.
 
 ## Running the Service
 
@@ -189,6 +197,12 @@ The image does **not** bundle the model file (`app/ml/*.pkl` is gitignored and e
 `.dockerignore`) — mount it as a volume as shown above. The container fails fast on startup if it's
 missing, which is the point: no silent fallback to an unloaded model.
 
+Expect the built image to be **~9GB** — `pip install torch` pulls the default CUDA build (bundled
+`nvidia-*` wheels) even though inference here runs on CPU only; that's dead weight, not something
+this service's code uses. See the "Install dependencies" note above and
+`../api-bird-orchestator-microservice/DOCKER.md` for why it's split into `requirements-ml.txt` and
+how that lets this image share that layer with `api-bird-classification-microservice` on disk.
+
 To run this service together with the orchestrator, classification, Postgres, and RabbitMQ via a
 single `docker compose up`, see `../api-bird-orchestator-microservice/DOCKER.md` — its
 `docker-compose.yml` builds this image from `../api-bird-detection-microservice`, so this repo needs
@@ -198,7 +212,7 @@ to be checked out as a sibling of the orchestrator repo.
 
 | Task | Command |
 |------|---------|
-| Install deps | `pip install -r requirements.txt` |
+| Install deps | `pip install -r requirements-ml.txt -r requirements.txt` |
 | Run dev server | `uvicorn app.main:app --reload` |
 | Run prod | `uvicorn app.main:app --host 0.0.0.0 --port 8000` |
 
